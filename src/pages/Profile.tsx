@@ -6,7 +6,7 @@ import { db } from '../lib/db'
 import { getIdentity, saveIdentity } from '../lib/identity'
 import { checkNickname } from '../lib/moderation'
 import { timeAgo } from '../lib/format'
-import { AVATARS, THEMES, type GameRecord, type Tree, type TreeMessage, type TreeStats, type Visit } from '../lib/types'
+import { AVATARS, THEMES, quizTier, type GameRecord, type QuizAttempt, type QuizProfile, type Tree, type TreeMessage, type TreeStats, type Visit } from '../lib/types'
 
 interface TreeWithStats {
   tree: Tree
@@ -19,6 +19,9 @@ export default function Profile() {
   const [avatar, setAvatar] = useState(identity.avatar)
   const [savedTip, setSavedTip] = useState<string | null>(null)
   const [myTrees, setMyTrees] = useState<TreeWithStats[]>([])
+  const [myQuiz, setMyQuiz] = useState<QuizProfile | null>(null)
+  const [quizAttempts, setQuizAttempts] = useState<QuizAttempt[]>([])
+  const [takenQuizzes, setTakenQuizzes] = useState<(QuizAttempt & { quizTitle: string })[]>([])
   const [myRecords, setMyRecords] = useState<GameRecord[]>([])
   const [inbox, setInbox] = useState<(TreeMessage & { treeName: string })[]>([])
   const [guestbook, setGuestbook] = useState<(Visit & { treeName: string })[]>([])
@@ -38,6 +41,17 @@ export default function Profile() {
     setMyRecords(records)
     setInbox(msgs)
     setGuestbook(visits)
+    const quiz = await db.getQuizProfileByOwner(uid).catch(() => null)
+    setMyQuiz(quiz)
+    if (quiz) setQuizAttempts(await db.listQuizAttempts(quiz.id, 10).catch(() => []))
+    const taken = await db.myQuizAttempts(uid, 10).catch(() => [])
+    const titled = await Promise.all(
+      taken.map(async (a) => {
+        const p = await db.getQuizProfile(a.profileId).catch(() => null)
+        return { ...a, quizTitle: p?.title ?? '一份问答' }
+      }),
+    )
+    setTakenQuizzes(titled)
   }
 
   useEffect(() => {
@@ -142,6 +156,50 @@ export default function Profile() {
               </div>
             ))}
           </div>
+        )}
+      </section>
+
+      {/* 我的问答 */}
+      <section className="glass rounded-3xl p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-bold">❓ 我的问答</h2>
+          <Link to="/quiz" className="btn-ghost rounded-xl px-3.5 py-1.5 text-sm">{myQuiz ? '管理问答' : '+ 出一份问答'}</Link>
+        </div>
+        {myQuiz ? (
+          <>
+            <div className="text-sm">
+              <span className="font-medium">{myQuiz.title}</span>
+              <span className="text-xs text-frost-300"> · 已收到 {quizAttempts.length} 份答卷</span>
+            </div>
+            {quizAttempts.length > 0 && (
+              <ul className="mt-2.5 space-y-1.5">
+                {quizAttempts.slice(0, 5).map((a) => (
+                  <li key={a.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-3.5 py-2.5 text-sm">
+                    <span className="min-w-0 truncate font-medium">{a.takerNickname}</span>
+                    <span className="shrink-0 text-xs text-frost-300">{quizTier(a.total ? a.score / a.total : 0).title}</span>
+                    <span className="shrink-0 font-bold text-gold-300">{a.score}/{a.total}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        ) : (
+          <p className="py-2 text-sm text-frost-300">还没有问答。出 10 道题邀朋友来答，看谁最懂你。</p>
+        )}
+        {takenQuizzes.length > 0 && (
+          <>
+            <h3 className="mb-2 mt-4 text-sm font-bold text-frost-300">我答过的问答</h3>
+            <ul className="space-y-1.5">
+              {takenQuizzes.map((a) => (
+                <li key={a.id}>
+                  <Link to={`/quiz/take?id=${a.profileId}`} className="flex items-center justify-between rounded-2xl bg-white/5 px-3.5 py-2.5 text-sm hover:bg-white/10">
+                    <span className="min-w-0 truncate">{a.quizTitle}</span>
+                    <span className="shrink-0 font-bold text-gold-300">{a.score}/{a.total}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
 

@@ -60,3 +60,7 @@ export default function ShareBar({ url, title }: { url: string; title: string })
 export function treeInviteUrl(id: string): string {
   return `${window.location.origin}/tree/visit?id=${encodeURIComponent(id)}`
 }
+
+export function quizInviteUrl(id: string): string {
+  return `${window.location.origin}/quiz/take?id=${encodeURIComponent(id)}`
+}

@@ -6,6 +6,8 @@ import CreateTree from './pages/CreateTree'
 import VisitTree from './pages/VisitTree'
 import Leaderboard from './pages/Leaderboard'
 import Profile from './pages/Profile'
+import QuizEdit from './pages/QuizEdit'
+import QuizTake from './pages/QuizTake'
 import NotFound from './pages/NotFound'
 import { db } from './lib/db'
 import { adoptCloudId } from './lib/identity'
@@ -49,6 +51,7 @@ export default function App() {
             </Link>
             <nav className="flex items-center gap-1">
               <NavLink to="/" end className={navCls}>首页</NavLink>
+              <NavLink to="/quiz" className={navCls}>问答</NavLink>
               <NavLink to="/leaderboard" className={navCls}>排行榜</NavLink>
               <NavLink to="/profile" className={navCls}>我的</NavLink>
             </nav>
@@ -71,6 +74,8 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/create" element={<CreateTree />} />
             <Route path="/tree/visit" element={<VisitTree />} />
+            <Route path="/quiz" element={<QuizEdit />} />
+            <Route path="/quiz/take" element={<QuizTake />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />

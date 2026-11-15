@@ -9,7 +9,7 @@ import { db } from '../lib/db'
 import { getIdentity } from '../lib/identity'
 import { checkContent } from '../lib/moderation'
 import { fmtDate, timeAgo } from '../lib/format'
-import { THEMES, type GameRecord, type Tree, type TreeMessage, type TreeStats, type Visit } from '../lib/types'
+import { THEMES, type GameRecord, type QuizProfile, type Tree, type TreeMessage, type TreeStats, type Visit } from '../lib/types'
 
 type Tab = 'msg' | 'rank' | 'visits'
 
@@ -18,6 +18,7 @@ export default function VisitTree() {
   const id = params.get('id') ?? ''
   const me = getIdentity()
   const [tree, setTree] = useState<Tree | null>(null)
+  const [quizProfile, setQuizProfile] = useState<QuizProfile | null>(null)
   const [status, setStatus] = useState<'loading' | 'ok' | 'missing' | 'error'>('loading')
   const [stats, setStats] = useState<TreeStats>({ visits: 0, plays: 0, bestScore: 0 })
   const [records, setRecords] = useState<GameRecord[]>([])
@@ -61,6 +62,7 @@ export default function VisitTree() {
         }
         setTree(t)
         setStatus('ok')
+        void db.getQuizProfileByOwner(t.ownerId).then(setQuizProfile).catch(() => setQuizProfile(null))
         await loadAll(t.id)
         // 记录访问（同一会话同一棵树只记一次；树主本人不计）
         const guardKey = `cloudztree.visited.${t.id}`
@@ -157,6 +159,28 @@ export default function VisitTree() {
 
   const isOwner = me.id === tree.ownerId
 
+  // 树上的纪念：把来过、爬过、留过言的朋友做成挂在树上的装饰
+  const participants = (() => {
+    const map = new Map<string, { nickname: string; best: number; played: boolean; messaged: boolean; visited: boolean }>()
+    const get = (pid: string, nickname: string) => {
+      let p = map.get(pid)
+      if (!p) {
+        p = { nickname, best: 0, played: false, messaged: false, visited: false }
+        map.set(pid, p)
+      }
+      return p
+    }
+    for (const v of visits) get(v.visitorId, v.visitorNickname).visited = true
+    for (const r of records) {
+      const p = get(r.playerId, r.playerNickname)
+      p.played = true
+      p.best = Math.max(p.best, r.score)
+    }
+    for (const m of messages) get(m.authorId, m.authorNickname).messaged = true
+    return [...map.values()]
+  })()
+  const ORNAMENT_COLORS = ['#e63946', '#ffd94d', '#4cc9f0', '#80ed99', '#f72585', '#ffa94d', '#b388ff']
+
   return (
     <div className="mx-auto max-w-xl space-y-5">
       {/* 树主与树 */}
@@ -203,11 +227,58 @@ export default function VisitTree() {
         </div>
       </section>
 
+      {/* 问答串门 */}
+      {quizProfile ? (
+        <section className="glass flex items-center gap-3 rounded-3xl p-4">
+          <div className="text-3xl">❓</div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-bold">{quizProfile.title}</div>
+            <div className="text-xs text-frost-300">
+              {isOwner ? '你的问答已上线，朋友答完你能看到他们的了解程度报告' : `${tree.ownerNickname} 出的问答，答完还有一份了解程度报告`}
+            </div>
+          </div>
+          <Link
+            to={isOwner ? '/quiz' : `/quiz/take?id=${quizProfile.id}`}
+            className="btn-gold shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
+          >
+            {isOwner ? '管理问答' : '去答题'}
+          </Link>
+        </section>
+      ) : isOwner ? (
+        <p className="text-center text-xs text-frost-300/70">
+          还没有问答？<Link to="/quiz" className="text-gold-300">出一份「你有多了解我」邀朋友来答 ›</Link>
+        </p>
+      ) : null}
+
       {/* 分享 */}
       <section className="glass rounded-3xl p-4">
         <div className="mb-2 text-sm font-bold">📣 邀更多人来爬这棵树</div>
         <ShareBar url={treeInviteUrl(tree.id)} title={`圣诞树「${tree.name}」`} />
       </section>
+
+      {/* 树上的纪念 */}
+      {participants.length > 0 && (
+        <section className="glass rounded-3xl p-4">
+          <div className="mb-3 text-sm font-bold">🌟 树上的纪念 · {participants.length} 位朋友来过</div>
+          <div className="flex flex-wrap gap-x-4 gap-y-3">
+            {participants.slice(0, 14).map((p, i) => (
+              <div key={p.nickname + i} className="flex flex-col items-center gap-1" title={p.nickname}>
+                <div
+                  className="relative h-9 w-9 rounded-full shadow-inner"
+                  style={{ background: `radial-gradient(circle at 32% 30%, rgba(255,255,255,0.85), ${ORNAMENT_COLORS[i % ORNAMENT_COLORS.length]} 58%)` }}
+                >
+                  <span className="absolute left-1/2 top-[-5px] h-[6px] w-[10px] -translate-x-1/2 rounded-sm bg-gold-400" />
+                </div>
+                <div className="max-w-[64px] truncate text-[11px] font-medium">{p.nickname}</div>
+                <div className="text-[10px] text-frost-300/80">
+                  {p.played ? `爬了 ${p.best} 分` : p.messaged ? '留过言' : '来过'}
+                </div>
+              </div>
+            ))}
+            {participants.length > 14 && <div className="self-center text-xs text-frost-300">+{participants.length - 14} 位…</div>}
+          </div>
+        </section>
+      )}
 
       {/* 互动区 */}
       <section className="glass rounded-3xl p-4">

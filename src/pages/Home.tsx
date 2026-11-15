@@ -100,11 +100,12 @@ export default function Home() {
       </section>
 
       {/* 玩法 */}
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { icon: '🌱', title: '种树邀友', desc: '选主题、起名字，生成你的专属邀请链接，一键分享给好友。' },
-          { icon: '🧗', title: '攀爬比拼', desc: '在好友的树上向上爬，躲雪球、摘星星，看谁爬得最高分最多。' },
-          { icon: '💌', title: '留言互动', desc: '在树下留一句话，访客和成绩都会被记下来，热热闹闹过圣诞。' },
+          { icon: '🌱', title: '种树邀友', desc: '选主题、起名字，生成你的专属邀请链接，一键分享给好友。', to: '/create' },
+          { icon: '❓', title: '你有多了解我', desc: '出一份只属于你的问答，邀朋友来答，看谁是最懂你的那个人。', to: '/quiz' },
+          { icon: '🧗', title: '攀爬比拼', desc: '在好友的树上向上爬，躲雪球、摘星星，爬到 100 米树顶登顶。', to: '/leaderboard' },
+          { icon: '💌', title: '留言互动', desc: '在树下留一句话，访客和成绩都会被记下来，热热闹闹过圣诞。', to: '/profile' },
         ].map((c, i) => (
           <motion.div
             key={c.title}
@@ -114,6 +115,7 @@ export default function Home() {
             <div className="text-2xl">{c.icon}</div>
             <h3 className="mt-2 font-bold">{c.title}</h3>
             <p className="mt-1 text-sm leading-relaxed text-frost-300">{c.desc}</p>
+            <Link to={c.to} className="mt-2 inline-block text-sm text-gold-300">去看看 ›</Link>
           </motion.div>
         ))}
       </section>
