@@ -12,7 +12,7 @@ export default function GameScreen({ tree, onClose }: { tree: Tree; onClose: () 
   const engineRef = useRef<ClimbEngine | null>(null)
   const submittedRef = useRef(false)
   const [phase, setPhase] = useState<Phase>('ready')
-  const [hud, setHud] = useState<HudState>({ score: 0, heightM: 0, stars: 0, hearts: 3 })
+  const [hud, setHud] = useState<HudState>({ score: 0, heightM: 0, stars: 0, ornaments: 0, hearts: 3, progress: 0, eventText: '', eventKey: 0 })
   const [result, setResult] = useState<GameResult | null>(null)
   const [rank, setRank] = useState<number | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -103,30 +103,55 @@ export default function GameScreen({ tree, onClose }: { tree: Tree; onClose: () 
   })
 
   return (
-    <div className="relative mx-auto w-full max-w-[420px] select-none">
+    <div className="relative mx-auto select-none" style={{ width: 'min(420px, 100%, calc((100dvh - 235px) * 0.643))' }}>
       <div className="relative overflow-hidden rounded-3xl border border-white/15 shadow-2xl">
         <canvas ref={canvasRef} style={{ width: '100%', aspectRatio: `${GAME_W} / ${GAME_H}`, touchAction: 'none', display: 'block' }} />
 
         {/* HUD */}
         {(phase === 'playing' || phase === 'paused') && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-3">
-            <div className="rounded-2xl bg-black/35 px-3 py-1.5 text-sm backdrop-blur-sm">
-              <div className="font-bold text-gold-300">{hud.score} 分</div>
-              <div className="text-[11px] text-frost-300">高度 {hud.heightM.toFixed(1)}m · ⭐ {hud.stars}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="rounded-2xl bg-black/35 px-2.5 py-1.5 text-sm backdrop-blur-sm">
-                {'❤️'.repeat(hud.hearts)}
-                {'🖤'.repeat(Math.max(0, 3 - hud.hearts))}
+          <div className="pointer-events-none absolute inset-x-0 top-0 p-3">
+            <div className="flex items-start justify-between">
+              <div className="rounded-2xl bg-black/35 px-3 py-1.5 text-sm backdrop-blur-sm">
+                <div className="font-bold text-gold-300">{hud.score} 分</div>
+                <div className="text-[11px] text-frost-300">高度 {hud.heightM.toFixed(1)}m · ⭐ {hud.stars} · 🔴 {hud.ornaments}</div>
               </div>
-              {phase === 'playing' && (
-                <button onClick={pauseGame} className="btn-ghost pointer-events-auto rounded-2xl px-3 py-1.5 text-sm" aria-label="暂停">
-                  ⏸
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                <div className="rounded-2xl bg-black/35 px-2.5 py-1.5 text-sm backdrop-blur-sm">
+                  {'❤️'.repeat(hud.hearts)}
+                  {'🖤'.repeat(Math.max(0, 3 - hud.hearts))}
+                </div>
+                {phase === 'playing' && (
+                  <button onClick={pauseGame} className="btn-ghost pointer-events-auto rounded-2xl px-3 py-1.5 text-sm" aria-label="暂停">
+                    ⏸
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* 登顶进度 */}
+            <div className="mx-auto mt-2 flex max-w-[240px] items-center gap-1.5">
+              <span className="text-[10px]">🌱</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/20">
+                <div className="h-full rounded-full bg-gold-400 transition-[width] duration-300" style={{ width: `${Math.round(hud.progress * 100)}%` }} />
+              </div>
+              <span className="text-[10px]">⭐</span>
             </div>
           </div>
         )}
+
+        {/* 随机事件提示 */}
+        <AnimatePresence>
+          {phase === 'playing' && hud.eventText && (
+            <motion.div
+              key={hud.eventKey + hud.eventText}
+              className="pointer-events-none absolute inset-x-0 top-[86px] flex justify-center"
+              initial={{ opacity: 0, y: -8, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <div className="rounded-full bg-black/55 px-4 py-1.5 text-sm font-medium text-gold-300 backdrop-blur-sm">{hud.eventText}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {phase === 'ready' && (
@@ -138,8 +163,9 @@ export default function GameScreen({ tree, onClose }: { tree: Tree; onClose: () 
               <h3 className="text-xl font-bold">爬上「{tree.name}」</h3>
               <p className="text-sm leading-relaxed text-frost-300">
                 按住屏幕左 / 右半边（或用 ◀ ▶ 键）左右移动
-                <br />躲开横树枝和掉落的雪球，收集星星 ⭐
-                <br />被砸中或掉出画面都会掉一颗心，3 颗心用完结束
+                <br />躲开横树枝和掉落的雪球，收集星星 ⭐ 和装饰球 🔴
+                <br />被砸中掉一颗心，3 颗心用完结束
+                <br />一路爬到 100 米树顶的大星星处 = 登顶！（+500 分）
               </p>
               <button onClick={startGame} className="btn-gold mt-2 rounded-2xl px-8 py-3 text-lg font-bold">
                 开始攀爬
@@ -167,12 +193,13 @@ export default function GameScreen({ tree, onClose }: { tree: Tree; onClose: () 
               className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 bg-midnight-950/75 p-6 text-center backdrop-blur-[2px]"
               initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
             >
-              <div className="text-4xl">🏁</div>
-              <h3 className="text-xl font-bold">攀爬结束！</h3>
+              <div className="text-4xl">{result.finished ? '🎉' : '🏁'}</div>
+              <h3 className="text-xl font-bold">{result.finished ? '登顶成功！你爬到了树顶！' : '攀爬结束！'}</h3>
               <div className="glass rounded-2xl px-6 py-3">
                 <div className="text-3xl font-black text-gold-300">{result.score} 分</div>
                 <div className="mt-1 text-sm text-frost-300">
-                  爬高 {result.heightM.toFixed(1)} 米 · 收集 ⭐ {result.stars}
+                  爬高 {result.heightM.toFixed(1)} 米 · 收集 ⭐ {result.stars} · 🔴 {result.ornaments}
+                  {result.finished && ' · 登顶奖励 +500'}
                 </div>
                 {rank !== null && <div className="mt-1 text-sm text-gold-400">在这棵树上排名第 {rank} 名</div>}
                 {submitError && <div className="mt-1 text-xs text-red-300">{submitError}</div>}
