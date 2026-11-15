@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --color-midnight-950: #070b1d;
+  --color-midnight-900: #0b1026;
+  --color-midnight-800: #131a3a;
+  --color-midnight-700: #1d2650;
+  --color-pine-600: #1e7a46;
+  --color-pine-500: #27a35c;
+  --color-pine-300: #7ed6a5;
+  --color-gold-300: #ffd97a;
+  --color-gold-400: #f5c04e;
+  --color-gold-500: #e8a91c;
+  --color-frost-100: #eef4ff;
+  --color-frost-300: #c3d4f5;
+  --font-display: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+html,
+body {
+  background: #070b1d;
+  color: #eef4ff;
+  font-family: var(--font-display);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+.glass {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.btn-gold {
+  background: linear-gradient(180deg, #ffd97a, #e8a91c);
+  color: #3a2703;
+  box-shadow: 0 6px 20px rgba(232, 169, 28, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: transform 0.08s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.btn-gold:active {
+  transform: scale(0.97);
+  filter: brightness(0.96);
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  transition: transform 0.08s ease, background 0.2s ease;
+}
+.btn-ghost:active {
+  transform: scale(0.97);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+.twinkle {
+  animation: twinkle 1.6s ease-in-out infinite;
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.floaty {
+  animation: floaty 4.5s ease-in-out infinite;
+}
+
+.nice-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.nice-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 99px;
+}
